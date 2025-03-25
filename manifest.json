@@ -1,0 +1,15 @@
+{
+    "name": "Crystal Source",
+    "window": {
+        "title": "Crystal Game",
+        "width": 750,
+        "height": 500,
+        "windowWidth": null,
+        "windowHeight": null,
+        "marginWidth": null,
+        "marginHeight": null,
+        "resizable": true,
+        "fillWindow": true,
+        "icon": "icon/icon.png"
+    }
+}

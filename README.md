@@ -31,7 +31,7 @@ You can also freely customize anything, just make sure to not break stuff
 1. Download engine<br>
 
 2. Setup `manifest.json`
-```json
+```js
 {
     "name": "Project name goes here",
     "window": {
@@ -50,7 +50,7 @@ You can also freely customize anything, just make sure to not break stuff
 ```
 
 3. Setup `data/build.json`
-```json
+```js
 {
     "libs" : [                // Libraries here
         "Assembly-JavaScript"
@@ -111,7 +111,7 @@ You can also freely customize anything, just make sure to not break stuff
 
 4. For scripting, you'll mostly be on `/js/libs/Assembly-Javascript/` (totally not stolen from another engine 👀)<br>
 Edit the library's `manifest.json`
-```json
+```js
 {
     "name" : "Assembly-JavaScript",
     "description" : "The assembly module where all of the build scripts are located",

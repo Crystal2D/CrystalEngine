@@ -7,7 +7,7 @@ You can also freely customize anything, just make sure to not break stuff
 
 ***Note: Although there's a tile editor, there's still no general one. So we're stuck on code based editing for now*** 
 
-**Latest version**: 2025.1a<br>
+**Latest version**: 2025.2a<br>
 **Licensed under**: [MIT](https://github.com/Crystal2D/engine?tab=MIT-1-ov-file#readme)
 
 
@@ -146,6 +146,6 @@ Edit the library's `manifest.json`
 }
 ```
 
-5. Edit scenes @ `data/scenes`
+5. Edit scenes @ `/data/scenes`
 
 6. Explore the engine

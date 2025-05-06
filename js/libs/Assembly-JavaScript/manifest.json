@@ -4,6 +4,9 @@
     "scripts" : [
         "Example"
     ],
+    "preserve": [
+        "idk.txt"
+    ],
     "classes" : [
         {
             "name": "Example",

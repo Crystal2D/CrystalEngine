@@ -9,6 +9,7 @@
         "marginWidth": null,
         "marginHeight": null,
         "resizable": true,
+        "fullscreen": false,
         "fillWindow": true,
         "icon": "icon/icon.png"
     }

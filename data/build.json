@@ -3,6 +3,9 @@
         "Assembly-JavaScript"
     ],
     "scripts" : [],
+    "resources": [
+        "main"
+    ],
     "scenes" : [
         "scene"
     ],
@@ -11,6 +14,7 @@
     ],
     "targetFrameRate" : -1,
     "vSyncCount" : 1,
+    "runInBackground" : false,
     "debugMode" : false,
     "time" : {
         "maximumDeltaTime" : 0.3333333,

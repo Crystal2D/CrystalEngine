@@ -5,9 +5,10 @@ Make games everywhere, in fact this was initially made on a phone ;)))
 
 You can also freely customize anything, just make sure to not break stuff
 
-***Note: Although there's a tile editor, there's still no general one. So we're stuck on code based editing for now*** 
+> [!IMPORTANT]
+> Although there's a tile editor, there's still no general one. So we're stuck on code based editing for now
 
-**Latest version**: 2025.2a<br>
+**Latest version**: 2025.3a<br>
 **Licensed under**: [MIT](https://github.com/Crystal2D/engine?tab=MIT-1-ov-file#readme)
 
 
@@ -43,6 +44,7 @@ You can also freely customize anything, just make sure to not break stuff
         "marginWidth": null,    // Viewport margin width (px)
         "marginHeight": null,   // Viewport margin height (px)
         "resizable": true,      // Sets if the window should be resizable
+        "fullscreen": false,    // Should the game start in fullscreen
         "fillWindow": true,     // Sets if the viewport should take the window's size
         "icon": "icon/icon.png" // Path to window icon
     }
@@ -57,6 +59,10 @@ You can also freely customize anything, just make sure to not break stuff
     ],
 
     "scripts" : [], // Plugins & external scripts
+
+    "resources" : [ // list of inluded resources @ `data/resources`
+        "main"
+    ],
 
     "scenes" : [
         "scene"
@@ -76,6 +82,8 @@ You can also freely customize anything, just make sure to not break stuff
     //    1: Every v-blank, use device refresh rate
     //    2: Every 2nd v-blank, use half of device refresh rate
     "vSyncCount" : 1,
+
+    "runInBackground": false, // should the game run even without focus
 
     "debugMode" : false, // Currently useless (ignore for now)
 
@@ -118,6 +126,9 @@ Edit the library's `manifest.json`
     "scripts" : [
         "Example" // Script filepath
     ],
+    "preserve": [   // Only used by the compressor
+        "idk.txt"   // put here the things you want to preserve as files
+    ],
     "classes" : [
         {
             "name": "Example", // Class name
@@ -130,7 +141,7 @@ Edit the library's `manifest.json`
             // (Not required) How an object should be created
             "construction": "return new Example();",
 
-            // Arguments and properties settable on scene files
+            // (Not required) Arguments and properties settable on scene files
             "args": [
                 {
                     "name": "text",  // property name

@@ -31,7 +31,7 @@ You can also freely customize anything, just make sure to not break stuff
 ## To start using
 1. Download engine<br>
 
-2. Setup `manifest.json`
+2. Setup [manifest.json](https://github.com/Crystal2D/CrystalEngine/blob/main/manifest.json)
 ```js
 {
     "name": "Project name goes here",
@@ -51,7 +51,7 @@ You can also freely customize anything, just make sure to not break stuff
 }
 ```
 
-3. Setup `data/build.json`
+3. Setup [/data/build.json](https://github.com/Crystal2D/CrystalEngine/blob/main/data/build.json)
 ```js
 {
     "libs" : [                // Libraries here
@@ -60,7 +60,7 @@ You can also freely customize anything, just make sure to not break stuff
 
     "scripts" : [], // Plugins & external scripts
 
-    "resources" : [ // list of inluded resources @ `data/resources`
+    "resources" : [ // list of inluded resources @ `/data/resources/`
         "main"
     ],
 
@@ -117,8 +117,8 @@ You can also freely customize anything, just make sure to not break stuff
 }
 ```
 
-4. For scripting, you'll mostly be on `/js/libs/Assembly-Javascript/` (totally not stolen from another engine 👀)<br>
-Edit the library's `manifest.json`
+4. For scripting, you'll mostly be on [/js/libs/Assembly-Javascript/](https://github.com/Crystal2D/CrystalEngine/tree/main/js/libs/Assembly-JavaScript) (totally not stolen from another engine 👀)<br>
+Edit the library's [manifest.json](https://github.com/Crystal2D/CrystalEngine/tree/main/js/libs/Assembly-JavaScript/manifest.json)
 ```js
 {
     "name" : "Assembly-JavaScript",
@@ -157,6 +157,8 @@ Edit the library's `manifest.json`
 }
 ```
 
-5. Edit scenes @ `/data/scenes`
+5. Edit scenes @ [/data/scenes/](https://github.com/Crystal2D/CrystalEngine/tree/main/data/scenes)
 
-6. Explore the engine
+6. Edit resources @ [/data/resources/](https://github.com/Crystal2D/CrystalEngine/tree/main/data/resources)
+
+7. Explore the engine

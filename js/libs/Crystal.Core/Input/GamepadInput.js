@@ -48,6 +48,41 @@ class GamepadInput
         return this.#gamepads.length !== 0;
     }
 
+    static get anyKey ()
+    {
+        for (let i = 0; i < this.#keys.length; i++)
+        {
+            if (this.#keys[i].active) return true;
+        }
+
+        for (let i = 0; i < this.#axes.length; i++)
+        {
+            if (Math.abs(this.#axes[i].value) >= 1e-3) return true;
+        }
+
+        return false;
+    }
+
+    static get anyKeyDown ()
+    {
+        for (let i = 0; i < this.#keys.length; i++)
+        {
+            if (this.#keys[i].active && !this.#keys[i].lastState) return true;
+        }
+
+        return false;
+    }
+
+    static get anyKeyUp ()
+    {
+        for (let i = 0; i < this.#keys.length; i++)
+        {
+            if (!this.#keys[i].active && this.#keys[i].lastState) return true;
+        }
+
+        return false;
+    }
+
     static Init ()
     {
         this.#keys = [
@@ -82,30 +117,40 @@ class GamepadInput
         if ("GamepadEvent" in window)
         {
             window.addEventListener("gamepadconnected", event => this.#gamepads.push(event.gamepad));
-            window.addEventListener("gamepaddisconnected", event => this.#gamepads.splice(this.#gamepads.indexOf(event.gamepad), 1));
+            window.addEventListener("gamepaddisconnected", event => {
+                this.#gamepads.splice(this.#gamepads.indexOf(event.gamepad), 1);
+                
+                this.Clear();
+            });
         }
         else if ("WebkitGamepadEvent" in window)
         {
             window.addEventListener("webkitgamepadconnected", event => this.#gamepads.push(event.gamepad));
-            window.addEventListener("webkitgamepaddisconnected", event => this.#gamepads.splice(this.#gamepads.indexOf(event.gamepad), 1));
+            window.addEventListener("webkitgamepaddisconnected", event => {
+                this.#gamepads.splice(this.#gamepads.indexOf(event.gamepad), 1);
+
+                this.Clear();
+            });
         }
         else this.#eventsUnsupported = true;
     }
 
     static Update ()
     {
+        const gamepads = navigator.getGamepads != null ? navigator.getGamepads() : (navigator.webkitGetGamepads != null ? navigator.webkitGetGamepads() : []);
+
         if (this.#eventsUnsupported)
         {
-            const gamepads = navigator.getGamepads != null ? navigator.getGamepads() : (navigator.webkitGetGamepads != null ? navigator.webkitGetGamepads() : []);
-
             this.#gamepads = gamepads.filter(item => item != null);
+
+            if (this.#gamepads.length === 0) this.Clear();
         }
 
         const processButton = button => button.pressed || button.touched || button.value > 0;
 
-        for (let i = 0; i < this.#gamepads.length; i++)
+        for (let i = 0; i < this.#gamepads.length && gamepads.length > 0; i++)
         {
-            const gamepad = navigator.getGamepads()[this.#gamepads[i].index];
+            const gamepad = gamepads[this.#gamepads[i]?.index];
 
             this.#keys[0].active = processButton(gamepad.buttons[0]);
             this.#keys[1].active = processButton(gamepad.buttons[1]);
@@ -136,12 +181,13 @@ class GamepadInput
 
     static End ()
     {
-        for (let i = 0; i < this.#keys.length; i++)
-        {
-            if (this.#gamepads.length === 0) this.#keys[i].active = false;
+        for (let i = 0; i < this.#keys.length; i++) this.#keys[i].lastState = this.#keys[i].active;
+    }
 
-            this.#keys[i].lastState = this.#keys[i].active;
-        }
+    static Clear ()
+    {
+        for (let i = 0; i < this.#keys.length; i++) this.#keys[i].active = false;
+        for (let i = 0; i < this.#axes.length; i++) this.#axes[i].value = 0;
     }
 
     static GetKey (key)

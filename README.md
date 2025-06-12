@@ -8,7 +8,7 @@ You can also freely customize anything, just make sure to not break stuff
 > [!IMPORTANT]
 > Although there's a tile editor, there's still no general one. So we're stuck on code based editing for now
 
-**Latest version**: 2025.4.2a<br>
+**Latest version**: 2025.5a<br>
 **Licensed under**: [MIT](https://github.com/Crystal2D/engine?tab=MIT-1-ov-file#readme)
 
 
@@ -96,6 +96,8 @@ You can also freely customize anything, just make sure to not break stuff
 
         "fixedDeltaTime" : 0.02 // The delta time used by physics
     },
+
+    "noFixedUpdate": false // Should FixedUpdate not be called
     
     "partioningMaxDepth" : 8, // Max depth of scene quadtree optimization
 

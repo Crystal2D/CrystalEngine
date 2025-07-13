@@ -27,13 +27,25 @@ class SceneManager
 
         if (scene.isInvalid) return false;
 
-        const prevScene = this.#activeScene?.index;
+        const prevScene = this.#activeScene;
+        const prevSceneID = this.#activeScene?.index;
 
-        if (this.#activeScene != null)
+        let keepOnLoad = [];
+
+        if (prevScene != null)
         {
-            await this.Unload(this.#activeScene.index);
+            keepOnLoad = prevScene.gameObjects.filter(item => item.keepOnLoad);
 
-            if (prevScene === index)
+            for (let i = 0; i < keepOnLoad.length; i++)
+            {
+                const index = prevScene.gameObjects.indexOf(keepOnLoad[i]);
+
+                prevScene.gameObjects.splice(index, 1);
+            }
+
+            await this.Unload(prevSceneID);
+
+            if (prevSceneID === index)
             {
                 await this.Load(index);
 
@@ -42,6 +54,24 @@ class SceneManager
         }
 
         this.#activeScene = scene;
+
+        for (let i = 0; i < keepOnLoad.length; i++)
+        {
+            prevScene?.tree.Remove(keepOnLoad[i]);
+
+            const renderer = keepOnLoad[i].GetComponent("Renderer");
+
+            if (renderer != null)
+            {
+                const min = renderer.bounds.min;
+                const max = renderer.bounds.max;
+                const rect = Rect.MinMaxRect(min.x, min.y, max.x, max.y);
+
+                this.#activeScene.tree.Insert(keepOnLoad[i], rect);
+            }
+
+            this.#activeScene.gameObjects.push(keepOnLoad[i]);
+        }
 
         this.activeSceneChanged.Invoke();
 
@@ -74,39 +104,23 @@ class SceneManager
 
     static async Unload (...index)
     {
-        for (let iA = 0; iA < index.length; iA++)
+        for (let i = 0; i < index.length; i++)
         {
-            if (this.GetActiveScene().index === index[iA])
+            if (this.GetActiveScene().index === index[i])
             {
                 for (let i = 0; i < this.#activeScene.gameObjects.length; i++) GameObject.Destroy(this.#activeScene.gameObjects[i]);
 
-                const loop = callback => {
-                    if (this.#activeScene.gameObjects.length === 0)
-                    {
-                        callback();
-        
-                        return;
-                    }
-        
-                    requestAnimationFrame(loop.bind(this, callback));
-                };
-        
-                await new Promise(resolve => loop(resolve));
+                await CrystalEngine.Wait(() => this.#activeScene.gameObjects.length === 0);
 
                 this.#activeScene = null;
             }
 
-            const scene = this.GetScene(index[iA]);
+            const scene = this.GetScene(index[i]);
 
             if (scene.isInvalid) continue;
 
-            for (let iB = 0; iB < scene.resources.length; iB++)
-            {
-                const res = scene.resources[iB];
-                const noRes = (this.#scenes.find(item => item.index !== index[iA] && item.resources.find(resItem => resItem === res) != null)) == null;
-
-                if (noRes) Resources.Unload(res);
-            }
+            const resources = scene.resourceList.filter(item => !Resources.keepOnLoad.includes(item) && (this.#scenes.find(subItem => subItem.index !== index[i] && subItem.resourceList.find(resItem => resItem === item) != null)) == null);
+            Resources.Unload(...resources);
 
             const itemIndex = this.#scenes.indexOf(scene);
 
@@ -123,7 +137,7 @@ class SceneManager
             if (this.#scenes.find(item => item.index === index[i])) continue;
 
             const path = `data/scenes/${this.#unloadedScenes[index[i]]}.json`;
-            const response = await fetch(path);
+            const response = await FetchFile(path);
             const data = await response.json();
 
             const scene = new Scene(data.name, {
@@ -143,6 +157,74 @@ class SceneManager
             this.sceneLoaded.Invoke();
         }
     }
+
+    static async EvalProperty (propData, data, out)
+    {
+        if (typeof propData !== "object" || data === undefined) return;
+
+        let output = null;
+
+        if (propData.gameObject)
+        {
+            PlayerLoop.onBeforeAwake.Add(() => {
+                if (data.prefab != null) output = Resources.FindPrefab(data.prefab);
+                else
+                {
+                    if (typeof data === "number") output = GameObject.FindByID(data);
+                    else output = GameObject.Find(data);
+                }
+
+                eval(`out.${propData.realName ?? propData.name} = output`);
+            });
+
+            return;
+        }
+
+        if (propData.component)
+        {
+            if (propData.explicit) PlayerLoop.onBeforeAwake.Add(() => {
+                let gameObj = null;
+
+                if (typeof data.gameObject === "number") gameObj = GameObject.FindByID(data.gameObject);
+                else gameObj = GameObject.Find(data.gameObject);
+
+                output = gameObj.GetComponent(data.type);
+
+                eval(`out.${propData.realName ?? propData.name} = output`);
+            });
+            else PlayerLoop.onBeforeAwake.Add(() => {
+                let gameObj = null;
+
+                if (typeof data === "number") gameObj = GameObject.FindByID(data);
+                else gameObj = GameObject.Find(data);
+
+                output = gameObj.GetComponent(propData.type);
+
+                eval(`out.${propData.realName ?? propData.name} = output`);
+            });
+
+            return;
+        }
+        
+        if (propData.evaluation != null)
+        {
+            const evalCall = new AsyncFunction("data", propData.evaluation);
+            
+            output = await evalCall(data);
+        }
+        else if (propData.evalType != null)
+        {
+            const evalCall = new AsyncFunction("data", propData.evalType);
+            const objType = await evalCall(data);
+            
+            output = await this.CreateObject(objType, data);
+        }
+        else if ((["bool", "number", "string", "object"]).includes(propData.type)) output = data;
+        else if (propData.array) output = await this.CreateObjectArray(propData.type, data);
+        else output = await this.CreateObject(propData.type, data);
+
+        eval(`out.${propData.realName ?? propData.name} = output`);
+    }
     
     static async CreateObject (type, data)
     {
@@ -152,7 +234,7 @@ class SceneManager
         
         const foundClass = CrystalEngine.Inner.GetClassOfType(type, 0);
         
-        if (foundClass == null) return new Object();
+        if (foundClass == null) return;
         
         const construction = foundClass.construction;
         const properties = foundClass.args;
@@ -167,28 +249,9 @@ class SceneManager
         
         for (let i = 0; i < properties.length; i++)
         {
-            if (typeof properties[i] !== "object" || eval(`dat.${properties[i].name}`) === undefined) continue;
-            
-            let subObj = null;
-            
-            if (properties[i].evaluation != null)
-            {
-                const evalCall = new AsyncFunction("data", properties[i].evaluation);
-                
-                subObj = await evalCall(eval(`dat.${properties[i].name}`));
-            }
-            else if (properties[i].evalType != null)
-            {
-                const evalCall = new AsyncFunction("data", properties[i].evalType);
-                const objType = await evalCall(eval(`dat.${properties[i].name}`));
-                
-                subObj = await this.CreateObject(objType, eval(`dat.${properties[i].name}`));
-            }
-            else if ((["boolean", "number", "string", "object"]).includes(properties[i].type)) subObj = eval(`dat.${properties[i].name}`);
-            else if (properties[i].type === "array") subObj = await this.CreateObjectArray(eval(`dat.${properties[i].name}`));
-            else subObj = await this.CreateObject(properties[i].type, eval(`dat.${properties[i].name}`));
-            
-            eval(`object.${properties[i].name} = subObj`);
+            const dataIn = eval(`dat.${properties[i].name}`);
+
+            await this.EvalProperty(properties[i], dataIn, object);
         }
         
         if (dat.name != null && type !== "GameObject") object.name = dat.name;
@@ -196,17 +259,18 @@ class SceneManager
         return object;
     }
     
-    static async CreateObjectArray (data)
+    static async CreateObjectArray (type, data)
     {
         let objects = [];
         
         for (let i = 0; i < data.length; i++)
         {
             let newObj = null;
-            
-            if (Array.isArray(data[i])) newObj = await this.CreateObjectArray(data[i]);
-            else if (typeof data[i] === "object" && data[i].__compiled) newObj = await this.CreateObject(data[i].type, data[i].args);
-            else newObj = data[i];
+
+            if (type === "array") newObj = await this.CreateObjectArray("bool", data[i]);
+            else if (type === "bool" && typeof data[i] === "object" && data[i].__evaluated) newObj = await this.CreateObject(type, data[i]);
+            else if ((["bool", "number", "string", "object"]).includes(type)) newObj = data[i];
+            else newObj = await this.CreateObject(type, data[i]);
             
             objects.push(newObj);
         }

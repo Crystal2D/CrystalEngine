@@ -1,7 +1,9 @@
 {
-    "name": "Crystal Source",
+    "name": "Project/Game Name",
+    "developer": "Developer Name or Something",
+    "version": "2025.1a",
     "window": {
-        "title": "Crystal Game",
+        "title": "Window Title",
         "width": 750,
         "height": 500,
         "windowWidth": null,

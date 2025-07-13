@@ -8,6 +8,7 @@ class PlayerLoop
     static #quitState = 0;
 
     static noFixedUpdate = false;
+    static onBeforeAwake = new DelegateEvent();
 
     static get isPlaying ()
     {
@@ -71,6 +72,12 @@ class PlayerLoop
         // PlayerStart
         if (this.#playing)
         {
+            Object.InstantiationQueue.Invoke();
+            Object.InstantiationQueue.RemoveAll();
+
+            PlayerLoop.onBeforeAwake.Invoke();
+            PlayerLoop.onBeforeAwake.RemoveAll();
+
             // ScriptRunBehaviorAwake
             BroadcastMessage("Awake", null, {
                 specialCall : 1,

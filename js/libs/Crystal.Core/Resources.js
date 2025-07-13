@@ -2,6 +2,9 @@ class Resources
 {
     static #unloadedRes = [];
     static #resources = [];
+    static #prefabs = [];
+
+    static keepOnLoad = [];
     
     static async #ToObject (name, type, data)
     {
@@ -11,7 +14,7 @@ class Resources
         
         const foundClass = CrystalEngine.Inner.GetClassOfType(type, 1);
         
-        if (foundClass == null) return new Object();
+        if (foundClass == null) return;
         
         const construction = foundClass.construction;
         const properties = foundClass.args;
@@ -22,10 +25,13 @@ class Resources
             
             object = await evalCall(dat, async (type, data) => await SceneManager.CreateObject(type, data));
         }
+        else object = eval(`new ${type}()`);
         
         for (let i = 0; i < properties.length; i++)
         {
-            if (typeof properties[i] !== "object" || eval(`dat.${properties[i].name}`) === undefined) continue;
+            const dataIn = eval(`dat.${properties[i].name}`);
+            
+            if (typeof properties[i] !== "object" || dataIn === undefined) continue;
             
             let subObj = null;
             
@@ -33,18 +39,18 @@ class Resources
             {
                 const evalCall = new AsyncFunction("data", properties[i].evaluation);
                 
-                subObj = await evalCall(eval(`dat.${properties[i].name}`));
+                subObj = await evalCall(dataIn);
             }
             else if (properties[i].evalType != null)
             {
                 const evalCall = new AsyncFunction("data", properties[i].evalType);
-                const objType = await evalCall(eval(`dat.${properties[i].name}`));
+                const objType = await evalCall(dataIn);
                 
-                subObj = await SceneManager.CreateObject(objType, eval(`dat.${properties[i].name}`));
+                subObj = await SceneManager.CreateObject(objType, dataIn);
             }
-            else if ((["boolean", "number", "string", "object"]).includes(properties[i].type)) subObj = eval(`dat.${properties[i].name}`);
-            else if (properties[i].type === "array") subObj = await SceneManager.CreateObjectArray(eval(`dat.${properties[i].name}`));
-            else subObj = await SceneManager.CreateObject(properties[i].type, eval(`dat.${properties[i].name}`));
+            else if ((["bool", "number", "string", "object"]).includes(properties[i].type)) subObj = dataIn;
+            else if (properties[i].array) subObj = await SceneManager.CreateObjectArray(properties[i].type, dataIn);
+            else subObj = await SceneManager.CreateObject(properties[i].type, dataIn);
             
             eval(`object.${properties[i].name} = subObj`);
         }
@@ -57,8 +63,18 @@ class Resources
     static Set (resources)
     {
         this.UnloadAll();
-        
-        this.#unloadedRes = resources;
+
+        this.#prefabs = resources.filter(item => item.type === "GameObject").map(item => {
+            const obj = item.args;
+            obj.__isPrefab = true;
+
+            return {
+                path: item.path,
+                obj: obj
+            };
+        });
+
+        this.#unloadedRes = resources.filter(item => item.type !== "GameObject");
     }
     
     static Unload (...path)
@@ -71,9 +87,11 @@ class Resources
 
             res.obj.Unload();
 
-            const index = this.#resources.indexOf(res);
+            const keepinIndex = this.keepOnLoad.indexOf(path[i]);
+            this.keepOnLoad.splice(keepinIndex, 1);
 
-            this.#resources.splice(index, 1);
+            const resIndex = this.#resources.indexOf(res);
+            this.#resources.splice(resIndex, 1);
         }
     }
     
@@ -82,6 +100,7 @@ class Resources
         for (let i = 0; i < this.#resources.length; i++) this.#resources[i].obj.Unload();
 
         this.#resources = [];
+        this.keepOnLoad = [];
     }
     
     static Find (path)
@@ -90,25 +109,68 @@ class Resources
         
         return res?.obj;
     }
+
+    static FindPrefab (path)
+    {
+        const prefab = this.#prefabs.find(item => item.path === path);
+
+        return prefab?.obj;
+    }
     
     static async Load (...path)
     {
+        const pathCount = path.length;
+        let pathIndex = 0;
+        
         for (let i = 0; i < path.length; i++)
         {
+            if (Array.isArray(path[i]))
+            {
+                (async () => {
+                    for (let j = 0; j < path[i].length; j++) await this.Load(path[i][j]);
+
+                    pathIndex++;
+                })();
+
+                continue;
+            }
+
+            if (this.#resources.find(item => item.path === path) != null) continue;
+
             const data = this.#unloadedRes.find(item => item.path === path[i]);
 
-            if (data == null || this.#resources.find(item => item.path === path) != null) continue;
+            if (data == null) throw new Error(`Resource Non-existent "${path[i]}"`);
 
-            const obj = await this.#ToObject(
-                path[i].split("/").slice(-1)[0],
-                data.type,
-                data.args
-            );
+            (async () => {
+                const obj = await this.#ToObject(
+                    path[i].split("/").slice(-1)[0],
+                    data.type,
+                    data.args
+                );
+            
+                this.#resources.push({
+                    path : path[i],
+                    obj : obj
+                });
 
-            this.#resources.push({
-                path : path[i],
-                obj : obj
-            });
+                pathIndex++;
+            })();
+        }
+
+        await CrystalEngine.Wait(() => pathIndex === pathCount);
+    }
+
+    static DontDestroyOnLoad (...path)
+    {
+        this.keepOnLoad.push(...path);
+    }
+
+    static DestroyOnLoad (...path)
+    {
+        for (let i = 0; i < path.length; i++)
+        {
+            const index = this.keepOnLoad.indexOf(path[i]);
+            this.keepOnLoad.splice(index, 1);
         }
     }
 }

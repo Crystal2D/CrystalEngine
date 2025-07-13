@@ -8,7 +8,7 @@ You can also freely customize anything, just make sure to not break stuff
 > [!IMPORTANT]
 > Although there's a tile editor, there's still no general one. So we're stuck on code based editing for now
 
-**Latest version**: 2025.5a<br>
+**Latest version**: 2025.6a<br>
 **Licensed under**: [MIT](https://github.com/Crystal2D/engine?tab=MIT-1-ov-file#readme)
 
 
@@ -34,9 +34,24 @@ You can also freely customize anything, just make sure to not break stuff
 2. Setup [manifest.json](https://github.com/Crystal2D/CrystalEngine/blob/main/manifest.json)
 ```js
 {
-    "name": "Project name goes here",
+    "name": "Project/game name goes here",
+    "developer": "Dev name here",
+
+    // Version here
+    //
+    // Only numbers are evaluated
+    // But you can include non-numerical stuff
+    // as long as the numbers are at front
+    //
+    // value u set => evaluated
+    // 3.2.16.2 => 3.2.16.2
+    // 1.1fJDJ => 1.1
+    // 21.12.2.12.1ehgjskdflgfgdsfud018263-9 => 21.12.2.12.1
+    // iuqwhe23.1 => NaN (Don't do this)
+    "version": "1.0.0",
+
     "window": {
-        "title": "Game/window title here",
+        "title": "Window title here",
         "width": 750,           // Resolution width (px)
         "height": 500,          // Resolution height (px)
         "windowWidth": null,    // Window width (px), if null then `width` is used
@@ -85,7 +100,7 @@ You can also freely customize anything, just make sure to not break stuff
 
     "runInBackground": false, // should the game run even without focus
 
-    "debugMode" : false, // Currently useless (ignore for now)
+    "debugMode" : false, // should you use DevTools shortcuts (i.e. Ctrl+Shift+J)
 
     "time" : {
         "maximumDeltaTime" : 0.3333333, // Max value of `Time.deltaTime`
@@ -100,6 +115,23 @@ You can also freely customize anything, just make sure to not break stuff
     "noFixedUpdate": false // Should FixedUpdate not be called
     
     "partioningMaxDepth" : 8, // Max depth of scene quadtree optimization
+
+    // Input config
+    "input": {
+        // Gamepad controller settings
+        //
+        // This is self explanatory lol
+        "gamepad": {
+            "leftStickDeadzone": {
+                "min": 0.125,
+                "max": 0.925
+            },
+            "rightStickDeadzone": {
+                "min": 0.125,
+                "max": 0.925
+            }
+        }
+    },
 
     // Add layers
     "layers" : [

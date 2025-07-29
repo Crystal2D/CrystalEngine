@@ -1,7 +1,8 @@
 class SceneManager
 {
     static #inited = false;
-    static #inactive = true;
+    static #active = false;
+    static #activePersistent = false;
     static #emptyScene = new Scene();
     static #unloadedScenes = [];
     static #scenes = [];
@@ -22,9 +23,9 @@ class SceneManager
         return this.#scenes.filter(item => item.isLoaded).length;
     }
 
-    static get currentlyInactive ()
+    static get active ()
     {
-        return this.#inactive;
+        return this.#active;
     }
     
     static async SetActiveScene (index)
@@ -61,6 +62,8 @@ class SceneManager
 
         this.#activeScene = scene;
 
+        await scene.LoadComponents();
+
         for (let i = 0; i < keepOnLoad.length; i++)
         {
             prevScene?.tree.Remove(keepOnLoad[i]);
@@ -76,12 +79,25 @@ class SceneManager
                 this.#activeScene.tree.Insert(keepOnLoad[i], rect);
             }
 
+            keepOnLoad[i].scene = this.#activeScene;
+
             this.#activeScene.gameObjects.push(keepOnLoad[i]);
         }
 
-        this.activeSceneChanged.Invoke();
+        this.#activePersistent = true;
 
-        this.#inactive = false;
+        await new Promise(resolve => {
+            const call = () => {
+                PlayerLoop.onFrameEnd.Remove(call);
+                resolve();
+            };
+            
+            PlayerLoop.onFrameEnd.Add(call);
+        });
+
+        this.#active = true;
+
+        this.activeSceneChanged.Invoke(index);
 
         return true;
     }
@@ -116,7 +132,8 @@ class SceneManager
         {
             if (this.GetActiveScene().index === index[i])
             {
-                this.#inactive = true;
+                this.#activePersistent = false;
+                this.#active = false;
 
                 for (let i = 0; i < this.#activeScene.gameObjects.length; i++) GameObject.Destroy(this.#activeScene.gameObjects[i]);
 
@@ -136,7 +153,7 @@ class SceneManager
 
             this.#scenes.splice(itemIndex, 1);
 
-            this.sceneUnloaded.Invoke();
+            this.sceneUnloaded.Invoke(index[i]);
         }
     }
 
@@ -158,13 +175,23 @@ class SceneManager
                 index : index[i]
             });
 
-            await Resources.Load(...scene.resources);
+            let loadCount = 0;
 
-            await scene.Load();
+            (async () => {
+                await Resources.Load(...scene.resources);
+                loadCount++;
+            })();
+
+            (async () => {
+                await scene.Load();
+                loadCount++;
+            })();
+
+            await CrystalEngine.Wait(() => loadCount === 2);
 
             this.#scenes.push(scene);
 
-            this.sceneLoaded.Invoke();
+            this.sceneLoaded.Invoke(index[i]);
         }
     }
 
@@ -177,13 +204,13 @@ class SceneManager
         if (propData.gameObject)
         {
             const call = () => {
-                if (this.#inactive) return;
+                if (!this.#activePersistent) return;
 
                 if (data.prefab != null) output = Resources.FindPrefab(data.prefab);
                 else
                 {
                     if (typeof data === "number") output = GameObject.FindByID(data);
-                    else output = GameObject.Find(data);
+                    else output = GameObject.Find(data, true);
                 }
 
                 eval(`out.${propData.realName ?? propData.name} = output`);
@@ -201,12 +228,12 @@ class SceneManager
             let call = null
 
             if (propData.explicit) call = () => {
-                if (this.#inactive) return;
+                if (!this.#activePersistent) return;
 
                 let gameObj = null;
 
                 if (typeof data.gameObject === "number") gameObj = GameObject.FindByID(data.gameObject);
-                else gameObj = GameObject.Find(data.gameObject);
+                else gameObj = GameObject.Find(data.gameObject, true);
 
                 output = gameObj.GetComponent(data.type);
 
@@ -215,12 +242,12 @@ class SceneManager
                 PlayerLoop.onBeforeAwake.Remove(call);
             };
             else call = () => {
-                if (this.#inactive) return;
-                
+                if (!this.#activePersistent) return;
+
                 let gameObj = null;
 
                 if (typeof data === "number") gameObj = GameObject.FindByID(data);
-                else gameObj = GameObject.Find(data);
+                else gameObj = GameObject.Find(data, true);
 
                 output = gameObj.GetComponent(propData.type);
 
